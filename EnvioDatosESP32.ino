@@ -1,15 +1,24 @@
 /*
- * Ejemplo leer temperatura y humedad
- * Sensor DHT11 y ESP32s
+ * Código que funciona para leer los datos de un arreglo
  * Este código que me esta funcionando para realizar pruebas
  */
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+
+#define SERIAL_FRAME_SYNC1 0;
+#define SERIAL_FRAME_SYNC2 1;
+#define SERIAL_FRAME_ID 2;
+#define SERIAL_FRAME_VALUE 3;
+#define SERIAL_FRAME_CRC 4;
+#define SERIAL_FRAME_LENGHT 5;
+
 #define MAX_DATA_SIZE 12
 uint8_t dataArray[MAX_DATA_SIZE];
 uint8_t dataSize = 0;
+uint8_t txArray[SERIAL_FRAME_LENGHT];
+
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_S1_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -71,6 +80,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 class MyCallbacks: public BLECharacteristicCallbacks{
   void onWrite(BLECharacteristic *pCharacteristic){
     std::string rxValue = pCharacteristic->getValue();
+    BLEUUID RxUuid = pCharacteristic->getUUID();
 
      if (rxValue.length() > 0) {
     // Limpiar el arreglo antes de copiar los nuevos datos
@@ -107,6 +117,7 @@ Thread* btThread = new Thread();
 
 void setup() {
   Serial.begin(115200);
+  encodeMessage();
   printDataArray();
   initBT();
   
@@ -126,31 +137,7 @@ void loop() {
       
       delay(2000);
 
-      Serial.print("S1:");
-      Serial.print(S1);
-      Serial.print(" S2:");
-      Serial.print(S2);
-      Serial.print(" S3:");
-      Serial.print(S3);
-      Serial.print(" S4:");
-      Serial.print(S4);
-      Serial.print(" S5:");
-      Serial.print(S5);
-      Serial.print(" S6:");
-      Serial.print(S6);
-      Serial.print(" S7:");
-      Serial.print(S7);
-      Serial.print(" S8:");
-      Serial.print(S8);
-      Serial.print(" S9:");
-      Serial.print(S9);
-      Serial.print(" S10: ");
-      Serial.print(S10);
-      Serial.print(" S11:");
-      Serial.print(S11);
-      Serial.print(" S12:");
-      Serial.print(S12);
-      Serial.print('\n');
+
   
 }
 
@@ -185,18 +172,7 @@ void btCallback(){
       String strS12 = "";
       strS12 += S12;
       
-      Serial.print(strS1);
-      Serial.print(strS2);
-      Serial.print(strS3);
-      Serial.print(strS4);
-      Serial.print(strS5);
-      Serial.print(strS6);
-      Serial.print(strS7);
-      Serial.print(strS8);
-      Serial.print(strS9);
-      Serial.print(strS10);
-      Serial.print(strS11);
-      Serial.print(strS12);
+      
       
       pCharacteristicS1->setValue((char*)strS1.c_str());
       pCharacteristicS1->notify();
@@ -257,7 +233,13 @@ void printDataArray() {
   Serial.println();
 }
 
-
+void encodeMessage(int id, int value){
+  txArray[SERIAL_FRAME_SYNC1] = 0xA5;
+  txArray[SERIAL_FRAME_SYNC2] = 0x5A;
+  txArray[SERIAL_FRAME_ID] = id;
+  txArray[SERIAL_FRAME_VALUE] = value;
+  txArray[SERIAL_FRAME_CRC] = 0;
+}
 
 void initBT(){
   // Create the BLE Device
