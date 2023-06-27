@@ -7,6 +7,9 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#define MAX_DATA_SIZE 12
+uint8_t dataArray[MAX_DATA_SIZE];
+uint8_t dataSize = 0;
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_S1_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -21,7 +24,6 @@
 #define CHARACTERISTIC_S10_UUID "a8f2dbc3-c562-42d9-a094-33e4cca73118"
 #define CHARACTERISTIC_S11_UUID "3c21b038-85a3-4c47-aa78-446f301dd61c"
 #define CHARACTERISTIC_S12_UUID "1b0724f2-156b-41a6-8bb6-22be491731fc"
-
 
 BLEServer* pServer = NULL;
 BLECharacteristic* pCharacteristicS1 = NULL;
@@ -70,22 +72,28 @@ class MyCallbacks: public BLECharacteristicCallbacks{
   void onWrite(BLECharacteristic *pCharacteristic){
     std::string rxValue = pCharacteristic->getValue();
 
-    if (rxValue.length()>0) {
+     if (rxValue.length() > 0) {
+    // Limpiar el arreglo antes de copiar los nuevos datos
+    memset(dataArray, 0, sizeof(dataArray));
 
-      Serial.println("Recibiendo datos");
-      Serial.print("Datos:");
-
-      for (int i = 0; i < rxValue.length(); i++){
-        Serial.print(rxValue[i]);
-      }
-
-      Serial.println();
-      Serial.println("Finalizar recepción");
+    // Copiar los datos recibidos en el arreglo
+    dataSize = rxValue.length();
+    for (int i = 0; i < dataSize; i++) {
+      dataArray[i] = rxValue[i];
     }
+
+    Serial.println("Recibiendo datos");
+    Serial.print("Datos: ");
+    for (int i = 0; i < dataSize; i++) {
+      Serial.print(dataArray[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+    Serial.println("Finalizar recepción");
+  }
+
   }
 };
-
-
 
 // Thread  
 #include <Thread.h>
@@ -99,6 +107,7 @@ Thread* btThread = new Thread();
 
 void setup() {
   Serial.begin(115200);
+  printDataArray();
   initBT();
   
   btThread->onRun(btCallback);
@@ -148,6 +157,8 @@ void loop() {
 void btCallback(){
   // notify changed value
     if (deviceConnected) {
+
+     
 
       String strS1 = "";
       strS1 += S1;
@@ -236,6 +247,16 @@ void btCallback(){
         oldDeviceConnected = deviceConnected;
     }
 }
+
+void printDataArray() {
+  Serial.print("Data Array: ");
+  for (int i = 0; i < dataSize; i++) {
+    Serial.print(dataArray[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
+}
+
 
 
 void initBT(){
