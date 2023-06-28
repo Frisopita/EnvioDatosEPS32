@@ -6,6 +6,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+<<<<<<< HEAD
 
 #define SERIAL_FRAME_SYNC1 0
 #define SERIAL_FRAME_SYNC2 1
@@ -22,6 +23,8 @@ uint8_t dataArray[MAX_DATA_SIZE];
 uint8_t dataSize = 0;
 uint8_t txArray[SERIAL_FRAME_LENGHT];
 
+=======
+>>>>>>> ca38aeaf92b369bd2efe433948ad1b2e4e5eea89
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_S1_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -36,6 +39,7 @@ uint8_t txArray[SERIAL_FRAME_LENGHT];
 #define CHARACTERISTIC_S10_UUID "a8f2dbc3-c562-42d9-a094-33e4cca73118"
 #define CHARACTERISTIC_S11_UUID "3c21b038-85a3-4c47-aa78-446f301dd61c"
 #define CHARACTERISTIC_S12_UUID "1b0724f2-156b-41a6-8bb6-22be491731fc"
+
 
 BLEServer* pServer = NULL;
 BLECharacteristic* pCharacteristicS1 = NULL;
@@ -67,6 +71,15 @@ int S10 = 65;
 int S11 = 75;
 int S12 = 85;
 
+struct SensorData {
+  uint32_t memoryAddress;
+  uint32_t sensorId;
+  float sensorData;
+};
+SensorData dataArr[10];  // Tamaño del arreglo: 10 sensores (puedes ajustarlo según tus necesidades)
+
+
+
 static BLERemoteCharacteristic* pRemoteCharacteristicRea;
 
 void encodeMessage(int id, int value){
@@ -96,11 +109,13 @@ class MyServerCallbacks: public BLEServerCallbacks {
     }
 };
 
+
 class MyCallbacks: public BLECharacteristicCallbacks{
   void onWrite(BLECharacteristic *pCharacteristic){
     std::string rxValue = pCharacteristic->getValue();
     BLEUUID RxUuid = pCharacteristic->getUUID();
 
+<<<<<<< HEAD
      if (rxValue.length() > 0) {
     // Limpiar el arreglo antes de copiar los nuevos datos
     memset(dataArray, 0, sizeof(dataArray));
@@ -127,8 +142,36 @@ class MyCallbacks: public BLECharacteristicCallbacks{
     sendMessage();
 
    
-  }
+=======
+  if (rxValue.length() > 0) {
+    Serial.println("Recibiendo datos");
+    Serial.print("Datos:");
 
+    for (int i = 0; i < rxValue.length(); i++) {
+      Serial.print(rxValue[i]);
+    }
+
+    // Deserializar los datos y almacenarlos en el arreglo
+    if (rxValue.length() == sizeof(SensorData)) {
+      SensorData receivedData;
+      memcpy(&receivedData, rxValue.data(), sizeof(SensorData));
+
+      // Guardar los datos en el arreglo
+      dataArr[receivedData.sensorId] = receivedData;
+
+      // Acceder a los datos individualmente
+      Serial.print("Memory Address: ");
+      Serial.println(dataArr[receivedData.sensorId].memoryAddress);
+      Serial.print("Sensor ID: ");
+      Serial.println(dataArr[receivedData.sensorId].sensorId);
+      Serial.print("Sensor Data: ");
+      Serial.println(dataArr[receivedData.sensorId].sensorData);
+    }
+
+    Serial.println();
+    Serial.println("Finalizar recepción");
+>>>>>>> ca38aeaf92b369bd2efe433948ad1b2e4e5eea89
+  }
   }
 };
 
@@ -170,7 +213,18 @@ void btCallback(){
   // notify changed value
     if (deviceConnected) {
 
-     
+      byte serializedData[sizeof(SensorData)];
+
+    // Iterar sobre el arreglo de datos y enviar cada elemento
+    for (int i = 0; i < 10; i++) {  // Cambia el límite según el tamaño de tu arreglo
+      // Serializar los datos
+      memcpy(serializedData, &dataArr[i], sizeof(SensorData));
+
+      // Enviar los datos serializados a través de Bluetooth
+      pCharacteristicS1->setValue(serializedData, sizeof(SensorData));
+      pCharacteristicS1->notify();
+      // Repite los pasos anteriores para cada característica (pCharacteristicS2, pCharacteristicS3, etc.) según sea necesario
+    }
 
       String strS1 = "";
       strS1 += S1;
@@ -249,6 +303,7 @@ void btCallback(){
     }
 }
 
+<<<<<<< HEAD
 void printDataArray() {
   Serial.print("Data Array: ");
   for (int i = 0; i < dataSize; i++) {
@@ -258,6 +313,8 @@ void printDataArray() {
   Serial.println();
 }
 
+=======
+>>>>>>> ca38aeaf92b369bd2efe433948ad1b2e4e5eea89
 
 void initBT(){
   // Create the BLE Device
