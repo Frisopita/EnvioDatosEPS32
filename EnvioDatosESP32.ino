@@ -7,12 +7,15 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-#define SERIAL_FRAME_SYNC1 0;
-#define SERIAL_FRAME_SYNC2 1;
-#define SERIAL_FRAME_ID 2;
-#define SERIAL_FRAME_VALUE 3;
-#define SERIAL_FRAME_CRC 4;
-#define SERIAL_FRAME_LENGHT 5;
+#define SERIAL_FRAME_SYNC1 0
+#define SERIAL_FRAME_SYNC2 1
+#define SERIAL_FRAME_ID 2
+#define SERIAL_FRAME_VALUE 3
+#define SERIAL_FRAME_CRC 4
+#define SERIAL_FRAME_LENGHT 5
+
+#define ID_HEART_RATE 0
+#define ID_SPO 1
 
 #define MAX_DATA_SIZE 12
 uint8_t dataArray[MAX_DATA_SIZE];
@@ -66,6 +69,22 @@ int S12 = 85;
 
 static BLERemoteCharacteristic* pRemoteCharacteristicRea;
 
+void encodeMessage(int id, int value){
+  txArray[SERIAL_FRAME_SYNC1] = 0xA5;
+  txArray[SERIAL_FRAME_SYNC2] = 0x5A;
+  txArray[SERIAL_FRAME_ID] = id;
+  txArray[SERIAL_FRAME_VALUE] = value;
+  txArray[SERIAL_FRAME_CRC] = 0;
+}
+void sendMessage()
+{
+    for (int i = 0; i < SERIAL_FRAME_LENGHT; i++) {
+      Serial.print(txArray[i]);
+    }
+    Serial.println();
+}
+
+
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
@@ -92,14 +111,22 @@ class MyCallbacks: public BLECharacteristicCallbacks{
       dataArray[i] = rxValue[i];
     }
 
-    Serial.println("Recibiendo datos");
-    Serial.print("Datos: ");
-    for (int i = 0; i < dataSize; i++) {
-      Serial.print(dataArray[i]);
-      Serial.print(" ");
+    if(1)//RxUuid.equals(CHARACTERISTIC_S1_UUID))
+    {
+      Serial.print("Hola");
+      encodeMessage(ID_HEART_RATE, dataArray[4]);
     }
-    Serial.println();
-    Serial.println("Finalizar recepción");
+    else if(0)//RxUuid.equals(CHARACTERISTIC_S2_UUID))
+    {
+      encodeMessage(ID_SPO, dataArray[4]);
+    }
+    else
+    {
+
+    }
+    sendMessage();
+
+   
   }
 
   }
@@ -117,8 +144,6 @@ Thread* btThread = new Thread();
 
 void setup() {
   Serial.begin(115200);
-  encodeMessage();
-  printDataArray();
   initBT();
   
   btThread->onRun(btCallback);
@@ -233,13 +258,6 @@ void printDataArray() {
   Serial.println();
 }
 
-void encodeMessage(int id, int value){
-  txArray[SERIAL_FRAME_SYNC1] = 0xA5;
-  txArray[SERIAL_FRAME_SYNC2] = 0x5A;
-  txArray[SERIAL_FRAME_ID] = id;
-  txArray[SERIAL_FRAME_VALUE] = value;
-  txArray[SERIAL_FRAME_CRC] = 0;
-}
 
 void initBT(){
   // Create the BLE Device
