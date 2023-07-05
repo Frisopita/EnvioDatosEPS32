@@ -87,7 +87,7 @@ bool deviceConnected = false;
 bool oldDeviceConnected = false;
 uint32_t value = 0;
 
-int S1 = 120;
+int S1 = 0;
 int S2 = 100;
 int S3 = 40;
 int S4 = 25;
@@ -96,10 +96,6 @@ int S6 = 10;
 int S7 = 7;
 
 static BLERemoteCharacteristic* pRemoteCharacteristicRea;
-
-// Datos de ejemplo para calcular el CRC-8
-uint8_t exampleData[] = {0xAA, 0xB2, 0xC3, 0x10};
-uint8_t dataLength = sizeof(exampleData);
 
 // Función para calcular el CRC-8 de un conjunto de datos
 uint8_t calculateCRC8(const uint8_t* data, uint8_t length) {
@@ -112,15 +108,13 @@ uint8_t calculateCRC8(const uint8_t* data, uint8_t length) {
     return crc;
 }
 
-uint8_t crc8 = calculateCRC8(exampleData, dataLength);
-
 
 void encodeMessage(int id, int value){
   txArray[SERIAL_FRAME_SYNC1] = 0xA5;
   txArray[SERIAL_FRAME_SYNC2] = 0x5A;
   txArray[SERIAL_FRAME_ID] = id;
   txArray[SERIAL_FRAME_VALUE] = value;
-  txArray[SERIAL_FRAME_CRC] = crc8;
+  txArray[SERIAL_FRAME_CRC] = calculateCRC8(txArray, 4);
 }
 void sendMessage()
 {
@@ -283,7 +277,7 @@ void initBT(){
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
   // Create the BLE Service
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLEService *pService = pServer->createService(BLEUUID(SERVICE_UUID), 50, 0);
   // Create a BLE Characteristic
   pCharacteristicS1 = pService->createCharacteristic(
                       CHARACTERISTIC_S1_UUID,
