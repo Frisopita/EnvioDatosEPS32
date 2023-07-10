@@ -22,11 +22,16 @@
 #define ID_DIASPRE 5
 #define ID_FR 6
 #define ID_CO2 7
+#define ID_TIMER 8
 
-#define MAX_DATA_SIZE 12
+#define MAX_DATA_SIZE 5
 uint8_t dataArray[MAX_DATA_SIZE];
 uint8_t dataSize = 0;
 uint8_t txArray[SERIAL_FRAME_LENGHT];
+
+uint8_t receivedData[MAX_DATA_SIZE];
+uint8_t receivedSize = 0;
+
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_S1_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define CHARACTERISTIC_S2_UUID "8bdf0a1a-a48e-4dc3-8bab-ad0c1f7ed218"
@@ -36,7 +41,6 @@ uint8_t txArray[SERIAL_FRAME_LENGHT];
 #define CHARACTERISTIC_S6_UUID "7533653f-6f0e-41fa-8fa6-9892a1904db1"
 #define CHARACTERISTIC_S7_UUID "607a2edc-007d-4d51-a3a6-58fad0db3c37"
 
-// Tabla de búsqueda para el cálculo del CRC-8
 const uint8_t crc8Table[] = {
 
 0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15, 
@@ -204,18 +208,59 @@ void setup() {
   controll.add(btThread);
 }
 void loop() {
-// put your main code here, to run repeatedly: 
   controll.run();
-     //Aumentar los valores de los sensores
-     // S1 = S1+1;
-     // S2 = S2+1;
-      
-      delay(2000);
+  delay(2000);
+
+    // Verificar si hay datos disponibles en el búfer de recepción serial
+  if (Serial.available() > 0) {
+    // Leer los datos disponibles y almacenarlos en receivedData
+    while (Serial.available() > 0 && receivedSize < MAX_DATA_SIZE) {
+            Serial.println("Holis alan");
+
+      receivedData[receivedSize] = Serial.read();
+      receivedSize++;
+    }
+
+    // Verificar si se ha recibido suficiente cantidad de datos
+    if (receivedSize >= SERIAL_FRAME_LENGHT) {
+      // 2. Verificar la integridad de los datos mediante el cálculo del CRC-8
+      uint8_t calculatedCRC = calculateCRC8(receivedData, receivedSize - 1);
+      uint8_t receivedCRC = receivedData[receivedSize - 1];
+
+      // 3. Comparar el CRC-8 calculado con el CRC-8 recibido
+      if (calculatedCRC == receivedCRC) {
+        // El CRC-8 es válido, los datos están completos y sin alteraciones
+
+        // Decodificar los datos
+        uint8_t id = receivedData[SERIAL_FRAME_ID];
+        uint8_t value = receivedData[SERIAL_FRAME_VALUE];
+
+        // Realizar acciones en función del ID y el valor recibidos
+        Serial.println("Recibiendo datos con exito");
+
+// Imprimir los valores de id y value
+
+Serial.print("ID: ");
+Serial.println(id);
+Serial.print("Valor: ");
+Serial.println(value);
+
+      } else {
+        // El CRC-8 no coincide, los datos pueden estar corruptos o incompletos
+        // Manejar el error según sea necesario
+         Serial.println("Nada");
+
+      }
+
+      // Reiniciar el contador de tamaño y prepararse para recibir nuevos datos
+      receivedSize = 0;
+    }
+  }
+
 }
 void btCallback(){
-  // notify changed value
     if (deviceConnected) {
-     
+    
       String strS1 = "";
       strS1 += S1;
       String strS2 = "";
@@ -344,7 +389,6 @@ void initBT(){
   pCharacteristicS6->setCallbacks(new MyCallbacks());
   pCharacteristicS7->setCallbacks(new MyCallbacks());
 
-  // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
   // Create a BLE Descriptorn
   pCharacteristicS1->addDescriptor(new BLE2902());
   pCharacteristicS2->addDescriptor(new BLE2902());
