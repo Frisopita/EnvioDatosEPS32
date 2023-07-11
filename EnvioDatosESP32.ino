@@ -2,6 +2,9 @@
  * Código que funciona para leer los datos de un arreglo
  * Este código que me esta funcionando para realizar pruebas
  */
+ // Thread  
+#include <Thread.h>
+#include <ThreadController.h>
 #include <stdint.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -33,6 +36,10 @@ uint8_t receivedData[MAX_DATA_SIZE];
 uint8_t receivedSize = 0;
 char x = 0;
 
+// ThreadController that will controll all threads
+ThreadController controll = ThreadController();
+Thread* btThread = new Thread();
+
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_S1_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define CHARACTERISTIC_S2_UUID "8bdf0a1a-a48e-4dc3-8bab-ad0c1f7ed218"
@@ -41,9 +48,9 @@ char x = 0;
 #define CHARACTERISTIC_S5_UUID "52294b4d-d66e-4d68-9782-1e5bb8f7ba14"
 #define CHARACTERISTIC_S6_UUID "7533653f-6f0e-41fa-8fa6-9892a1904db1"
 #define CHARACTERISTIC_S7_UUID "607a2edc-007d-4d51-a3a6-58fad0db3c37"
+#define CHARACTERISTIC_S8_UUID "aea7aac8-5a97-488e-bd01-4166d22ec81e"
 
 const uint8_t crc8Table[] = {
-
 0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15, 
 0x38, 0x3f, 0x36, 0x31, 0x24, 0x23, 0x2a, 0x2d, 
 0x70, 0x77, 0x7e, 0x79, 0x6c, 0x6b, 0x62, 0x65, 
@@ -76,7 +83,6 @@ const uint8_t crc8Table[] = {
 0x96, 0x91, 0x98, 0x9f, 0x8a, 0x8d, 0x84, 0x83, 
 0xde, 0xd9, 0xd0, 0xd7, 0xc2, 0xc5, 0xcc, 0xcb, 
 0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3 
-
 };
 
 BLEServer* pServer = NULL;
@@ -87,6 +93,7 @@ BLECharacteristic* pCharacteristicS4 = NULL;
 BLECharacteristic* pCharacteristicS5 = NULL;
 BLECharacteristic* pCharacteristicS6 = NULL;
 BLECharacteristic* pCharacteristicS7 = NULL;
+BLECharacteristic* pCharacteristicS8 = NULL;
 
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
@@ -99,6 +106,7 @@ int S4 = 25;
 int S5 = 35;
 int S6 = 10;
 int S7 = 7;
+int S8 = 0;
 
 static BLERemoteCharacteristic* pRemoteCharacteristicRea;
 
@@ -113,7 +121,7 @@ uint8_t calculateCRC8(const uint8_t* data, uint8_t length) {
     return crc;
 }
 
-
+//Funcion para codificar el mensaje con crc8
 void encodeMessage(int id, int value){
   txArray[SERIAL_FRAME_SYNC1] = 0xA5;
   txArray[SERIAL_FRAME_SYNC2] = 0x5A;
@@ -121,12 +129,13 @@ void encodeMessage(int id, int value){
   txArray[SERIAL_FRAME_VALUE] = value;
   txArray[SERIAL_FRAME_CRC] = calculateCRC8(txArray, 4);
 }
+//Funcion para enviar mensaje por serial
 void sendMessage()
 {
   Serial.write(txArray, SERIAL_FRAME_LENGHT);
 }
 
-
+//Callbacks que reciben datos de bluetooth
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
@@ -193,13 +202,8 @@ class MyCallbacks: public BLECharacteristicCallbacks{
 
   }
 };
-// Thread  
-#include <Thread.h>
-#include <ThreadController.h>
-// ThreadController that will controll all threads
-ThreadController controll = ThreadController();
-Thread* btThread = new Thread();
 
+//Inicializar 
 void setup() {
   Serial.begin(115200);
   Serial2.begin(115200);
@@ -207,6 +211,7 @@ void setup() {
   btThread->setInterval(100);
   controll.add(btThread);
 }
+//Loop
 void loop() {
   controll.run();
   delay(2000);
@@ -256,6 +261,7 @@ void loop() {
   }
 
 }
+//Flutter btcallback
 void btCallback(){
     if (deviceConnected) { 
       
@@ -348,6 +354,14 @@ void initBT(){
                       BLECharacteristic::PROPERTY_NOTIFY |
                       BLECharacteristic::PROPERTY_INDICATE
                     );
+  pCharacteristicS8 = pService->createCharacteristic(
+                      CHARACTERISTIC_S1_UUID,
+                      BLECharacteristic::PROPERTY_READ   |
+                      BLECharacteristic::PROPERTY_WRITE  |
+                      BLECharacteristic::PROPERTY_NOTIFY |
+                      BLECharacteristic::PROPERTY_INDICATE
+                    );
+
   
   
   pCharacteristicS1->setCallbacks(new MyCallbacks());
@@ -357,6 +371,7 @@ void initBT(){
   pCharacteristicS5->setCallbacks(new MyCallbacks());
   pCharacteristicS6->setCallbacks(new MyCallbacks());
   pCharacteristicS7->setCallbacks(new MyCallbacks());
+  pCharacteristicS8->setCallbacks(new MyCallbacks());
 
   // Create a BLE Descriptorn
   pCharacteristicS1->addDescriptor(new BLE2902());
@@ -366,6 +381,7 @@ void initBT(){
   pCharacteristicS5->addDescriptor(new BLE2902());
   pCharacteristicS6->addDescriptor(new BLE2902());
   pCharacteristicS7->addDescriptor(new BLE2902());
+  pCharacteristicS8->addDescriptor(new BLE2902());
   // Start the service
   pService->start();
   // Start advertising
@@ -374,6 +390,6 @@ void initBT(){
   pAdvertising->setScanResponse(false);
   pAdvertising->setMinPreferred(0x0);  // set value to 0x00 to not advertise this parameter
   BLEDevice::startAdvertising();
-  //Serial.println("Waiting a client connection to notify...");
+  Serial.println("Waiting a client connection to notify...");
   
 }
