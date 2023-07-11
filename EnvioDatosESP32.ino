@@ -31,6 +31,7 @@ uint8_t txArray[SERIAL_FRAME_LENGHT];
 
 uint8_t receivedData[MAX_DATA_SIZE];
 uint8_t receivedSize = 0;
+char x = 0;
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_S1_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -186,7 +187,7 @@ class MyCallbacks: public BLECharacteristicCallbacks{
     }
     else
     {
-      Serial.println("No");
+     // Serial.println("No");
     }
   }
 
@@ -201,8 +202,7 @@ Thread* btThread = new Thread();
 
 void setup() {
   Serial.begin(115200);
-  initBT();
-
+  Serial2.begin(115200);
   btThread->onRun(btCallback);
   btThread->setInterval(100);
   controll.add(btThread);
@@ -212,15 +212,18 @@ void loop() {
   delay(2000);
 
     // Verificar si hay datos disponibles en el búfer de recepción serial
-  if (Serial.available() > 0) {
+  if (Serial2.available() > 0) {
     // Leer los datos disponibles y almacenarlos en receivedData
-    while (Serial.available() > 0 && receivedSize < MAX_DATA_SIZE) {
-            Serial.println("Holis alan");
+    //while (Serial.available() > 0 && receivedSize < MAX_DATA_SIZE) {
+    //        Serial.println("Holis alan");
+    //  receivedData[receivedSize] = Serial.read();
+    //  receivedSize++;
+    //}
 
-      receivedData[receivedSize] = Serial.read();
-      receivedSize++;
-    }
-
+    Serial2.readBytes(receivedData, 5);
+    for(int i = 0; i < 5; i++) {
+      Serial.print(receivedData[i],HEX);
+    }     
     // Verificar si se ha recibido suficiente cantidad de datos
     if (receivedSize >= SERIAL_FRAME_LENGHT) {
       // 2. Verificar la integridad de los datos mediante el cálculo del CRC-8
@@ -238,17 +241,12 @@ void loop() {
         // Realizar acciones en función del ID y el valor recibidos
         Serial.println("Recibiendo datos con exito");
 
-// Imprimir los valores de id y value
-
-Serial.print("ID: ");
-Serial.println(id);
-Serial.print("Valor: ");
-Serial.println(value);
+        // Imprimir los valores de id y value
 
       } else {
         // El CRC-8 no coincide, los datos pueden estar corruptos o incompletos
         // Manejar el error según sea necesario
-         Serial.println("Nada");
+        // Serial.println("Nada");
 
       }
 
@@ -259,44 +257,15 @@ Serial.println(value);
 
 }
 void btCallback(){
-    if (deviceConnected) {
-    
-      String strS1 = "";
-      strS1 += S1;
-      String strS2 = "";
-      strS2 += S2;
-      String strS3 = "";
-      strS3 += S3;
-      String strS4 = "";
-      strS4 += S4;
-      String strS5 = "";
-      strS5 += S5;
-      String strS6 = "";
-      strS6 += S6;
-      String strS7 = "";
-      strS7 += S7;
-      String strS8 = "";   
+    if (deviceConnected) { 
       
-      pCharacteristicS1->setValue((char*)strS1.c_str());
-      pCharacteristicS1->notify();
-      pCharacteristicS2->setValue((char*)strS2.c_str());
-      pCharacteristicS2->notify();
-      pCharacteristicS3->setValue((char*)strS3.c_str());
-      pCharacteristicS3->notify();
-      pCharacteristicS4->setValue((char*)strS4.c_str());
-      pCharacteristicS4->notify();
-      pCharacteristicS5->setValue((char*)strS5.c_str());
-      pCharacteristicS5->notify();
-      pCharacteristicS6->setValue((char*)strS6.c_str());
-      pCharacteristicS6->notify();
-      pCharacteristicS7->setValue((char*)strS7.c_str());
-      pCharacteristicS7->notify();
+    
     }
     // disconnecting
     if (!deviceConnected && oldDeviceConnected) {
         //delay(500); // give the bluetooth stack the chance to get things ready
         pServer->startAdvertising(); // restart advertising
-        Serial.println("start advertising");
+        //Serial.println("start advertising");
         oldDeviceConnected = deviceConnected;
     }
     // connecting
@@ -306,12 +275,12 @@ void btCallback(){
     }
 }
 void printDataArray() {
-  Serial.print("Data Array: ");
+ //Serial.print("Data Array: ");
   for (int i = 0; i < dataSize; i++) {
-    Serial.print(dataArray[i]);
-    Serial.print(" ");
+    //Serial.print(dataArray[i]);
+    //Serial.print(" ");
   }
-  Serial.println();
+  //Serial.println();
 }
 
 
@@ -405,6 +374,6 @@ void initBT(){
   pAdvertising->setScanResponse(false);
   pAdvertising->setMinPreferred(0x0);  // set value to 0x00 to not advertise this parameter
   BLEDevice::startAdvertising();
-  Serial.println("Waiting a client connection to notify...");
+  //Serial.println("Waiting a client connection to notify...");
   
 }
