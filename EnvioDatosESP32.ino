@@ -207,64 +207,67 @@ class MyCallbacks: public BLECharacteristicCallbacks{
 void setup() {
   Serial.begin(115200);
   Serial2.begin(115200);
+  initBT();
   btThread->onRun(btCallback);
   btThread->setInterval(100);
   controll.add(btThread);
+  
 }
 //Loop
 void loop() {
   controll.run();
-  delay(2000);
-
-    // Verificar si hay datos disponibles en el búfer de recepción serial
-  if (Serial2.available() > 0) {
-    // Leer los datos disponibles y almacenarlos en receivedData
-    //while (Serial.available() > 0 && receivedSize < MAX_DATA_SIZE) {
-    //        Serial.println("Holis alan");
-    //  receivedData[receivedSize] = Serial.read();
-    //  receivedSize++;
-    //}
-
-    Serial2.readBytes(receivedData, 5);
-    for(int i = 0; i < 5; i++) {
-      Serial.print(receivedData[i],HEX);
-    }     
-    // Verificar si se ha recibido suficiente cantidad de datos
-    if (receivedSize >= SERIAL_FRAME_LENGHT) {
-      // 2. Verificar la integridad de los datos mediante el cálculo del CRC-8
-      uint8_t calculatedCRC = calculateCRC8(receivedData, receivedSize - 1);
-      uint8_t receivedCRC = receivedData[receivedSize - 1];
-
-      // 3. Comparar el CRC-8 calculado con el CRC-8 recibido
-      if (calculatedCRC == receivedCRC) {
-        // El CRC-8 es válido, los datos están completos y sin alteraciones
-
-        // Decodificar los datos
-        uint8_t id = receivedData[SERIAL_FRAME_ID];
-        uint8_t value = receivedData[SERIAL_FRAME_VALUE];
-
-        // Realizar acciones en función del ID y el valor recibidos
-        Serial.println("Recibiendo datos con exito");
-
-        // Imprimir los valores de id y value
-
-      } else {
-        // El CRC-8 no coincide, los datos pueden estar corruptos o incompletos
-        // Manejar el error según sea necesario
-        // Serial.println("Nada");
-
-      }
-
-      // Reiniciar el contador de tamaño y prepararse para recibir nuevos datos
-      receivedSize = 0;
-    }
-  }
 
 }
 //Flutter btcallback
 void btCallback(){
     if (deviceConnected) { 
-      
+
+        // Verificar si hay datos disponibles en el búfer de recepción serial
+  if (Serial2.available() > 0) {
+
+    
+
+    Serial2.readBytes(receivedData, 5);
+    String receivedString = "";
+    for(int i = 0; i < 5; i++) {
+      Serial.print(receivedData[i],HEX);
+      receivedString += String(receivedData[i], HEX);
+    }   
+    Serial.println("\n");
+    Serial.println(receivedString);
+
+    pCharacteristicS8->setValue((char*)receivedString.c_str());
+    pCharacteristicS8->notify();
+
+    // Verificar si se ha recibido suficiente cantidad de datos
+    if (receivedSize >= SERIAL_FRAME_LENGHT) {
+      // Verificar la integridad de los datos mediante el cálculo del CRC-8
+      uint8_t calculatedCRC = calculateCRC8(receivedData, receivedSize - 1);
+      uint8_t receivedCRC = receivedData[receivedSize - 1];
+
+      // Comparar el CRC-8 calculado con el CRC-8 recibido
+      if (calculatedCRC == receivedCRC) {
+        // El CRC-8 es válido, los datos están completos y sin alteraciones
+
+        // Decodificar los datos
+        uint8_t sync1 = receivedData[SERIAL_FRAME_SYNC1];
+        uint8_t sync2 = receivedData[SERIAL_FRAME_SYNC2];
+        uint8_t id = receivedData[SERIAL_FRAME_ID];
+        uint8_t value = receivedData[SERIAL_FRAME_VALUE];
+
+        std::string dataValue(reinterpret_cast<char*>(receivedData), receivedSize);
+        pCharacteristicS8->setValue(dataValue);
+        pCharacteristicS8->notify();
+
+      } else {
+        // El CRC-8 no coincide, los datos pueden estar corruptos o incompletos
+        // Manejar el error según sea necesario
+        // Serial.println("Nada");
+      }
+      // Reiniciar el contador de tamaño y prepararse para recibir nuevos datos
+      receivedSize = 0;
+    }
+  }  
     
     }
     // disconnecting
@@ -355,14 +358,12 @@ void initBT(){
                       BLECharacteristic::PROPERTY_INDICATE
                     );
   pCharacteristicS8 = pService->createCharacteristic(
-                      CHARACTERISTIC_S1_UUID,
+                      CHARACTERISTIC_S8_UUID,
                       BLECharacteristic::PROPERTY_READ   |
                       BLECharacteristic::PROPERTY_WRITE  |
                       BLECharacteristic::PROPERTY_NOTIFY |
                       BLECharacteristic::PROPERTY_INDICATE
                     );
-
-  
   
   pCharacteristicS1->setCallbacks(new MyCallbacks());
   pCharacteristicS2->setCallbacks(new MyCallbacks());
