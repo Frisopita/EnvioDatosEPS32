@@ -26,6 +26,7 @@
 #define ID_FR 6
 #define ID_CO2 7
 #define ID_TIMER 8
+#define ID_STATE 9
 
 #define MAX_DATA_SIZE 5
 uint8_t dataArray[MAX_DATA_SIZE];
@@ -49,6 +50,7 @@ Thread* btThread = new Thread();
 #define CHARACTERISTIC_S6_UUID "7533653f-6f0e-41fa-8fa6-9892a1904db1"
 #define CHARACTERISTIC_S7_UUID "607a2edc-007d-4d51-a3a6-58fad0db3c37"
 #define CHARACTERISTIC_S8_UUID "aea7aac8-5a97-488e-bd01-4166d22ec81e"
+#define CHARACTERISTIC_S9_UUID "2a1c9f0b-78c4-4e0f-adc1-5dea4a248344"
 
 const uint8_t crc8Table[] = {
 0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15, 
@@ -94,6 +96,7 @@ BLECharacteristic* pCharacteristicS5 = NULL;
 BLECharacteristic* pCharacteristicS6 = NULL;
 BLECharacteristic* pCharacteristicS7 = NULL;
 BLECharacteristic* pCharacteristicS8 = NULL;
+BLECharacteristic* pCharacteristicS9 = NULL;
 
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
@@ -194,6 +197,16 @@ class MyCallbacks: public BLECharacteristicCallbacks{
       encodeMessage(ID_CO2, dataArray[0]);
       sendMessage();
     }
+    else if(memcmp_P(stringArray, CHARACTERISTIC_S8_UUID, 32) == 0)
+    {
+      encodeMessage(ID_TIMER, dataArray[0]);
+      sendMessage();
+    }
+    else if(memcmp_P(stringArray, CHARACTERISTIC_S9_UUID, 32) == 0)
+    {
+      encodeMessage(ID_STATE, dataArray[0]);
+      sendMessage();
+    }
     else
     {
      // Serial.println("No");
@@ -238,6 +251,8 @@ void btCallback(){
 
     pCharacteristicS8->setValue((char*)receivedString.c_str());
     pCharacteristicS8->notify();
+    pCharacteristicS9->setValue((char*)receivedString.c_str());
+    pCharacteristicS9->notify();
 
     // Verificar si se ha recibido suficiente cantidad de datos
     if (receivedSize >= SERIAL_FRAME_LENGHT) {
@@ -258,6 +273,8 @@ void btCallback(){
         std::string dataValue(reinterpret_cast<char*>(receivedData), receivedSize);
         pCharacteristicS8->setValue(dataValue);
         pCharacteristicS8->notify();
+        pCharacteristicS9->setValue(dataValue);
+        pCharacteristicS9->notify();
 
       } else {
         // El CRC-8 no coincide, los datos pueden estar corruptos o incompletos
@@ -364,7 +381,14 @@ void initBT(){
                       BLECharacteristic::PROPERTY_NOTIFY |
                       BLECharacteristic::PROPERTY_INDICATE
                     );
-  
+  pCharacteristicS9 = pService->createCharacteristic(
+                      CHARACTERISTIC_S9_UUID,
+                      BLECharacteristic::PROPERTY_READ   |
+                      BLECharacteristic::PROPERTY_WRITE  |
+                      BLECharacteristic::PROPERTY_NOTIFY |
+                      BLECharacteristic::PROPERTY_INDICATE
+                    );
+                      
   pCharacteristicS1->setCallbacks(new MyCallbacks());
   pCharacteristicS2->setCallbacks(new MyCallbacks());
   pCharacteristicS3->setCallbacks(new MyCallbacks());
@@ -373,7 +397,7 @@ void initBT(){
   pCharacteristicS6->setCallbacks(new MyCallbacks());
   pCharacteristicS7->setCallbacks(new MyCallbacks());
   pCharacteristicS8->setCallbacks(new MyCallbacks());
-
+  pCharacteristicS9->setCallbacks(new MyCallbacks());
   // Create a BLE Descriptorn
   pCharacteristicS1->addDescriptor(new BLE2902());
   pCharacteristicS2->addDescriptor(new BLE2902());
@@ -383,6 +407,7 @@ void initBT(){
   pCharacteristicS6->addDescriptor(new BLE2902());
   pCharacteristicS7->addDescriptor(new BLE2902());
   pCharacteristicS8->addDescriptor(new BLE2902());
+  pCharacteristicS9->addDescriptor(new BLE2902());
   // Start the service
   pService->start();
   // Start advertising
