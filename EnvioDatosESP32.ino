@@ -219,7 +219,7 @@ class MyCallbacks: public BLECharacteristicCallbacks{
 //Inicializar 
 void setup() {
   Serial.begin(115200);
-  Serial2.begin(115200);
+  //Serial2.begin(115200);
   initBT();
   btThread->onRun(btCallback);
   btThread->setInterval(100);
@@ -236,17 +236,17 @@ void btCallback(){
     if (deviceConnected) { 
 
         // Verificar si hay datos disponibles en el búfer de recepción serial
-  if (Serial2.available() > 0) {
-
+  //if (Serial2.available() > 0) {
+  if (Serial.available() > 0) {
     
-
-    Serial2.readBytes(receivedData, 5);
+    //Serial2.readBytes(receivedData, 5);
+    Serial.readBytes(receivedData, 5);
     String receivedString = "";
     for(int i = 0; i < 5; i++) {
       Serial.print(receivedData[i],HEX);
       receivedString += String(receivedData[i], HEX);
     }   
-    Serial.println("\n");
+    //Serial.println("\n");
     Serial.println(receivedString);
 
     pCharacteristicS8->setValue((char*)receivedString.c_str());
