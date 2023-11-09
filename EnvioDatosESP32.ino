@@ -28,6 +28,8 @@
 #define ID_TIMER 8
 #define ID_STATE 9
 
+#define DEVICE_NAME "Kabanta"
+
 #define MAX_DATA_SIZE 5
 uint8_t dataArray[MAX_DATA_SIZE];
 uint8_t dataSize = 0;
@@ -312,7 +314,7 @@ void printDataArray() {
 
 void initBT(){
   // Create the BLE Device
-  BLEDevice::init("ESP32 Sopita");
+  BLEDevice::init(DEVICE_NAME);
   // Create the BLE Server
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
